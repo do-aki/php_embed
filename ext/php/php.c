@@ -22,27 +22,91 @@ static void php_sapi_error(int type, const char *fmt, ...)
 }
 
 VALUE zval_to_value(zval* val) {
-    VALUE r;
+  VALUE r;
 
-    switch(Z_TYPE_P(val)) {
-      case IS_NULL:
-          return Qnil;
-      case IS_BOOL:
-          return (zval_is_true(val)) ? Qtrue : Qfalse;
-      case IS_LONG:
-          return INT2NUM(Z_LVAL_P(val));
-      case IS_DOUBLE:
-          return DBL2NUM(Z_DVAL_P(val));
-      case IS_ARRAY:
-      case IS_OBJECT:
-      case IS_STRING:
-      case IS_RESOURCE:
-      case IS_CONSTANT:
-      case IS_CONSTANT_ARRAY:
-      default:
-          convert_to_string(val);
-          return rb_str_new(Z_STRVAL_P(val), Z_STRLEN_P(val));
-    }
+  switch(Z_TYPE_P(val)) {
+    case IS_NULL:
+      return Qnil;
+    case IS_BOOL:
+      return (zval_is_true(val)) ? Qtrue : Qfalse;
+    case IS_LONG:
+      return INT2NUM(Z_LVAL_P(val));
+    case IS_DOUBLE:
+      return DBL2NUM(Z_DVAL_P(val));
+    case IS_ARRAY:
+      {
+        HashTable* ht = Z_ARRVAL_P(val);
+        HashPosition p;
+        int idx = 0;
+        zval** data;
+
+        r = rb_ary_new2(zend_hash_num_elements(ht));
+
+        zend_hash_internal_pointer_reset_ex(ht, &p);
+        while (zend_hash_get_current_data_ex(ht, (void **)&data, &p) == SUCCESS) {
+          VALUE t = zval_to_value(*data);
+          rb_ary_store(r, idx++, t);
+          zend_hash_move_forward_ex(ht, &p);
+        }
+        return r; 
+      }
+    case IS_OBJECT:
+    case IS_STRING:
+    case IS_RESOURCE:
+    case IS_CONSTANT:
+    case IS_CONSTANT_ARRAY:
+    default:
+      convert_to_string(val);
+      return rb_str_new(Z_STRVAL_P(val), Z_STRLEN_P(val));
+  }
+}
+
+void value2php_arg(VALUE v, char* out_arg) {
+  switch (TYPE(v)) {
+    case T_FALSE:
+    	strcat(out_arg, "false");
+      return;
+    case T_TRUE:
+    	strcat(out_arg, "true");
+      return;
+    case T_UNDEF:
+    case T_NIL:
+    	strcat(out_arg, "null");
+      return;
+    case T_FIXNUM:
+      {
+        VALUE t = rb_fix2str(v, 10);
+        strcat(out_arg, StringValuePtr(t));
+      }
+      return;
+    case T_BIGNUM:
+    case T_FLOAT:
+      {
+        VALUE t = rb_big2str(v, 10);
+        strcat(out_arg, StringValuePtr(t));
+      }
+      return;
+    case T_ARRAY:
+      {
+        int i;
+        strcat(out_arg, "array(");
+        for(i=0;i<RARRAY_LEN(v);++i) {
+          value2php_arg(RARRAY_PTR(v)[i], out_arg);
+          if (i != RARRAY_LEN(v)-1) {
+            strcat(out_arg, ",");
+          }
+        }
+        strcat(out_arg, ")");
+      }
+    case T_HASH:
+      /* no implement */
+      return;
+    case T_STRING:
+    default:
+      strcat(out_arg, "'");
+      strcat(out_arg, StringValuePtr(v));
+      strcat(out_arg, "'");
+  }
 }
 
 int eval_php_code(char* code, const char* fetch_variable_name, VALUE* fetch_value) {
@@ -88,36 +152,10 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
   
   arg_str[0] = '\0';
   for(i=0; i<argc-1; ++i) {
+    char arg[255] = "";
+    value2php_arg(RARRAY_PTR(args)[i], arg);
+    strcat(arg_str, arg);
     
-    VALUE a = RARRAY_PTR(args)[i];
-    switch (TYPE(a)) {
-      case T_FALSE:
-      	strcat(arg_str, "false");
-        break;
-      case T_TRUE:
-      	strcat(arg_str, "true");
-        break;
-      case T_UNDEF:
-      case T_NIL:
-      	strcat(arg_str, "null");
-        break;
-      case T_FIXNUM:
-        { VALUE t = rb_fix2str(a, 10);
-        strcat(arg_str, StringValuePtr(t));
-        }
-        break;
-      case T_BIGNUM:
-      case T_FLOAT:
-        { VALUE t = rb_big2str(a, 10);
-        strcat(arg_str, StringValuePtr(t));
-        }
-        break;
-      case T_STRING:
-      default:
-        strcat(arg_str, "'");
-        strcat(arg_str, StringValuePtr(a));
-        strcat(arg_str, "'");
-    }
     if (i != argc-2) {
       strcat(arg_str, ",");
     }

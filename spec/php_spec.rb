@@ -42,6 +42,11 @@ describe 'Php' do
       php = Php.new
       php.call("pow", 2, 8).should == 256;
   end 
+
+  it 'call_pow' do
+      php = Php.new
+      php.call("array_diff", [1,2,3,4,5], [3,4]).should == [1,2,5];
+  end 
 end 
 
 
