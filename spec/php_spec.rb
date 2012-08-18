@@ -7,49 +7,44 @@ describe 'Php' do
   end
 
   describe 'eval' do 
-      it 'return true with valid php code' do
-          php = Php.new
-          php.eval(";").should be_true;
+      it 'return any types' do
+          Php.eval('true').should be_true; 
+          Php.eval('false').should be_false; 
+          Php.eval('null').should be_nil; 
+          Php.eval('1').should == 1; 
       end
      
       it 'return false with invalid php code' do
           proc {
-              php = Php.new
-              php.eval("invalid").should be_false;
+              Php.eval("i n v a l i d");
           }.should raise_error
       end 
   end 
 
   describe 'call' do
       it 'return phpversion' do
-          php = Php.new
-          php.call("phpversion").should == "5.4.5";
+          Php.call("phpversion").should == "5.4.5";
       end 
 
       it 'bin2hex return hex string' do
-          php = Php.new
-          php.call("bin2hex", "+").should == "2b";
+          Php.call("bin2hex", "+").should == "2b";
       end 
     
     
       it 'intval return integer value' do
-          php = Php.new
-          php.call("intval", "123a").should == 123;
+          Php.call("intval", "123a").should == 123;
       end 
       
       it 'floatval return float value' do
-          php = Php.new
-          php.call("floatval", "-8.93").should == -8.93;
+          Php.call("floatval", "-8.93").should == -8.93;
       end 
     
       it 'call with integer' do
-          php = Php.new
-          php.call("pow", 2, 8).should == 256;
+          Php.call("pow", 2, 8).should == 256;
       end 
     
       it 'call with array' do
-          php = Php.new
-          php.call("array_diff", [1,2,3,4,5], [3,4]).should == [1,2,5];
+          Php.call("array_diff", [1,2,3,4,5], [3,4]).should == [1,2,5];
       end 
   end
 
@@ -60,8 +55,7 @@ describe 'Php' do
           capture = output
         })
         
-        php = Php.new
-        php.eval('echo "hoge";')
+        Php.eval('print("hoge")')
         capture.should == 'hoge'
     end 
   end
@@ -73,8 +67,7 @@ describe 'Php' do
           capture << error
         })
         
-        php = Php.new
-        php.eval('trigger_error("hoge");')
+        Php.eval('trigger_error("hoge");')
         capture.should == [
           "PHP Notice:  hoge in  on line 1",
           "PHP Stack trace:",

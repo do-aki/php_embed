@@ -117,36 +117,31 @@ void value2php_arg(VALUE v, char* out_arg) {
   }
 }
 
-int eval_php_code(char* code, const char* fetch_variable_name, VALUE* fetch_value) {
+int eval_php_code(char* code, VALUE* return_value) {
   const char *argv[2] = {"ruby", NULL};
   int err = 0;
   zval **data;
+  zval retval;
 
   PHP_EMBED_START_BLOCK(1, (char**)argv);
 
-  if (zend_eval_string(code, NULL, (char*)"" TSRMLS_CC) == FAILURE) {
+  if (zend_eval_string(code, &retval, (char*)"" TSRMLS_CC) == FAILURE) {
     err = 1;
-  }
-
-  if (NULL != fetch_variable_name) {
-    if (zend_hash_find(&EG(symbol_table), fetch_variable_name, strlen(fetch_variable_name) + 1, (void **)&data) != FAILURE) {
-      *fetch_value = zval_to_value(*data);
-    }
   }
 
   PHP_EMBED_END_BLOCK();
 
+  *return_value = zval_to_value(&retval);
   return err;
 }
 
 VALUE php_eval(VALUE self, VALUE code) {
-  const char *argv[2] = {"ruby", NULL};
-  
-  if (eval_php_code(StringValuePtr(code), NULL, NULL)) {
+  VALUE retval;
+  if (eval_php_code(StringValuePtr(code), &retval)) {
     rb_raise(rb_eRuntimeError, "invalid code");
   }
 
-  return Qtrue;
+  return retval;
 }
 
 VALUE php_call(int argc, VALUE *argv, VALUE self) {
@@ -169,11 +164,11 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
     }
   }
 
-  sprintf(call_str, "$retval = %s(%s);", StringValuePtr(func), arg_str);
-  // printf("\n***%s***\n", call_str);
-  if (eval_php_code(call_str, "retval", &retval)) {
+  sprintf(call_str, "%s(%s);", StringValuePtr(func), arg_str);
+  //printf("\n***%s***\n", call_str);
+  if (eval_php_code(call_str, &retval)) {
     rb_raise(rb_eRuntimeError, "eval error");
-  }
+  }	
 
   return retval;
 }
@@ -204,14 +199,11 @@ Init_Php() {
   cPhp = rb_define_class("Php", rb_cObject);
   rb_define_const(cPhp, "VERSION", rb_ary_new3(3, INT2FIX(0), INT2FIX(0), INT2FIX(1)));
 
-  rb_define_method(cPhp, "eval", php_eval, 1);
-  rb_define_method(cPhp, "call", php_call, -1);
-
+  rb_define_singleton_method(cPhp, "eval", php_eval, 1);
+  rb_define_singleton_method(cPhp, "call", php_call, -1);
   rb_define_singleton_method(cPhp, "setOutputHandler", php_set_output_handler, 1);
   rb_define_singleton_method(cPhp, "setErrorHandler", php_set_error_handler, 1);
-  
-
-
+   
   php_embed_module.ub_write = php_ub_write;
   php_embed_module.log_message = php_log_message;
   php_embed_module.sapi_error = php_sapi_error;
