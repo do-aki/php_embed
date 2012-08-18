@@ -2,15 +2,23 @@
 #include <ruby.h>
 #include <sapi/embed/php_embed.h>
 
+static VALUE callback_output = Qnil;
+static VALUE callback_error = Qnil;
 
 static int php_ub_write(const char *str, unsigned int str_length TSRMLS_DC)
 {
-  printf("php_output: %s\n", str);
+  if (!NIL_P(callback_output)) {
+    VALUE args = rb_ary_new();
+    rb_ary_push(args, rb_str_new(str, str_length));
+    rb_proc_call(callback_output, args);
+  }
   return str_length;
 }
 static void php_log_message(char *message)
 {
-  printf("php_log: %s\n", message);
+  if (!NIL_P(callback_error)) {
+    rb_proc_call(callback_error, rb_ary_new3(1, rb_str_new(message, strlen(message))));
+  }
 }
 static void php_sapi_error(int type, const char *fmt, ...)
 {
@@ -170,7 +178,25 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
   return retval;
 }
 
+VALUE php_set_output_handler(VALUE self, VALUE callback) {
+  if (rb_obj_is_proc(callback)) {
+    callback_output = callback;
+  } else {
+    rb_raise(rb_eArgError, "callback must be proc");
+  }
+  
+  return Qnil;
+}
 
+VALUE php_set_error_handler(VALUE self, VALUE callback) {
+  if (rb_obj_is_proc(callback)) {
+    callback_error = callback;
+  } else {
+    rb_raise(rb_eArgError, "callback must be proc");
+  }
+  
+  return Qnil;
+}
 
 Init_Php() {
 
@@ -181,6 +207,8 @@ Init_Php() {
   rb_define_method(cPhp, "eval", php_eval, 1);
   rb_define_method(cPhp, "call", php_call, -1);
 
+  rb_define_singleton_method(cPhp, "setOutputHandler", php_set_output_handler, 1);
+  rb_define_singleton_method(cPhp, "setErrorHandler", php_set_error_handler, 1);
   
 
 
