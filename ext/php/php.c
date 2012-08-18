@@ -170,7 +170,7 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
   }
 
   sprintf(call_str, "$retval = %s(%s);", StringValuePtr(func), arg_str);
-  printf("\n***%s***\n", call_str);
+  // printf("\n***%s***\n", call_str);
   if (eval_php_code(call_str, "retval", &retval)) {
     rb_raise(rb_eRuntimeError, "eval error");
   }
