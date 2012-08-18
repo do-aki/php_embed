@@ -88,9 +88,14 @@ void value2php_arg(VALUE v, char* out_arg) {
       }
       return;
     case T_BIGNUM:
-    case T_FLOAT:
       {
         VALUE t = rb_big2str(v, 10);
+        strcat(out_arg, StringValuePtr(t));
+      }
+      return;
+    case T_FLOAT:
+      {
+        VALUE t = rb_funcall(v, rb_intern("to_s"), 0);
         strcat(out_arg, StringValuePtr(t));
       }
       return;
@@ -164,7 +169,7 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
     }
   }
 
-  sprintf(call_str, "%s(%s);", StringValuePtr(func), arg_str);
+  sprintf(call_str, "%s(%s)", StringValuePtr(func), arg_str);
   //printf("\n***%s***\n", call_str);
   if (eval_php_code(call_str, &retval)) {
     rb_raise(rb_eRuntimeError, "eval error");
