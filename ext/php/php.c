@@ -137,6 +137,8 @@ int eval_php_code(char* code, VALUE* return_value) {
   PHP_EMBED_END_BLOCK();
 
   *return_value = zval_to_value(&retval);
+  zval_dtor(&retval);
+
   return err;
 }
 
