@@ -200,11 +200,11 @@ VALUE php_set_error_handler(VALUE self, VALUE callback) {
   return Qnil;
 }
 
-Init_Php() {
+Init_php() {
 
   VALUE cPhp;
-  cPhp = rb_define_class("Php", rb_cObject);
-  rb_define_const(cPhp, "VERSION", rb_ary_new3(3, INT2FIX(0), INT2FIX(0), INT2FIX(1)));
+  cPhp = rb_define_module("PhpEmbed");
+  //rb_define_const(cPhp, "VERSION", rb_ary_new3(3, INT2FIX(0), INT2FIX(0), INT2FIX(1)));
 
   rb_define_singleton_method(cPhp, "eval", php_eval, 1);
   rb_define_singleton_method(cPhp, "call", php_call, -1);
