@@ -13,7 +13,7 @@ Gem::Specification.new do |gem|
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "php_embed"
-  gem.require_paths = ['ext/php_embed/', 'ext/php_embed/']
+  gem.require_paths = ['lib']
   gem.version       = PhpEmbed::VERSION
 
 end
