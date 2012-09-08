@@ -123,21 +123,21 @@ void value2php_arg(VALUE v, char* out_arg) {
 }
 
 int eval_php_code(char* code, VALUE* return_value) {
-  const char *argv[2] = {"ruby", NULL};
   int err = 0;
   zval **data;
   zval retval;
 
-  PHP_EMBED_START_BLOCK(1, (char**)argv);
+  zend_try {
+    if (zend_eval_string(code, &retval, (char*)"" TSRMLS_CC) == FAILURE) {
+      err = 1;
+    }
 
-  if (zend_eval_string(code, &retval, (char*)"" TSRMLS_CC) == FAILURE) {
-    err = 1;
-  }
+    *return_value = zval_to_value(&retval);
+    zval_dtor(&retval);
 
-  PHP_EMBED_END_BLOCK();
+  } zend_catch {
 
-  *return_value = zval_to_value(&retval);
-  zval_dtor(&retval);
+  } zend_end_try();
 
   return err;
 }
@@ -200,6 +200,16 @@ VALUE php_set_error_handler(VALUE self, VALUE callback) {
   return Qnil;
 }
 
+void initialize_php_embed() {
+  const char *argv[2] = {"ruby", NULL};
+  php_embed_init(1, (char**)argv);
+  EG(bailout)=NULL;
+}
+
+void shutdown_php_embed() {
+  php_embed_shutdown(TSRMLS_C);
+}
+
 Init_php() {
 
   VALUE cPhp;
@@ -215,6 +225,8 @@ Init_php() {
   php_embed_module.log_message = php_log_message;
   php_embed_module.sapi_error = php_sapi_error;
 
+  initialize_php_embed();
+  atexit(shutdown_php_embed);
 }
 
 
