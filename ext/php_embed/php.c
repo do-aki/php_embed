@@ -2,6 +2,8 @@
 #include <ruby.h>
 #include <sapi/embed/php_embed.h>
 
+#include <php_embed_value.h>
+
 static VALUE callback_output = Qnil;
 static VALUE callback_error = Qnil;
 
@@ -29,6 +31,76 @@ static void php_sapi_error(int type, const char *fmt, ...)
     va_end(va);
 }
 
+static int is_array_convertable(HashTable* ht) {
+  HashPosition pos;
+  char  *string_key;
+  ulong num_index;
+  ulong index = 0;
+
+  zend_hash_internal_pointer_reset_ex(ht, &pos);
+  do {
+    switch(zend_hash_get_current_key_ex(ht, &string_key, NULL, &num_index, 0, &pos)) {
+      case HASH_KEY_IS_STRING:
+        return 0;
+      case HASH_KEY_NON_EXISTANT:
+        return 1;
+      case HASH_KEY_IS_LONG:
+        if (num_index != index) {
+          return 0;
+        }
+        ++index;
+    }
+  } while(SUCCESS == zend_hash_move_forward_ex(ht, &pos));
+  return 1;
+}
+
+VALUE zval_to_value(zval* val);
+VALUE hash_to_array(HashTable* ht) {
+  HashPosition pos;
+  zval** data;
+  VALUE ret;
+
+  ret = rb_ary_new2(zend_hash_num_elements(ht));
+
+  zend_hash_internal_pointer_reset_ex(ht, &pos);
+  while (SUCCESS == zend_hash_get_current_data_ex(ht, (void **)&data, &pos)) {
+    VALUE t = zval_to_value(*data);
+    rb_ary_push(ret, t);
+    zend_hash_move_forward_ex(ht, &pos);
+  }
+  return ret;
+}
+
+VALUE hash_to_hash(HashTable* ht) {
+  HashPosition pos;
+  zval** data;
+  VALUE ret;
+
+  ret = rb_hash_new();
+
+  zend_hash_internal_pointer_reset_ex(ht, &pos);
+  while (SUCCESS == zend_hash_get_current_data_ex(ht, (void **)&data, &pos)) {
+    char* string_key;
+    ulong num_index;
+    VALUE key = Qnil;
+    VALUE val = zval_to_value(*data);
+
+    switch(zend_hash_get_current_key_ex(ht, &string_key, NULL, &num_index, 0, &pos)) {
+      case HASH_KEY_IS_STRING:
+        key = rb_str_new_cstr(string_key);
+        break;
+      case HASH_KEY_IS_LONG:
+        key = LONG2NUM(num_index);
+        break;
+    }
+
+    rb_hash_aset(ret, key, val);
+    zend_hash_move_forward_ex(ht, &pos);
+  }
+  return ret;
+}
+
+
 VALUE zval_to_value(zval* val) {
   VALUE r;
 
@@ -44,19 +116,16 @@ VALUE zval_to_value(zval* val) {
     case IS_ARRAY:
       {
         HashTable* ht = Z_ARRVAL_P(val);
-        HashPosition p;
-        int idx = 0;
-        zval** data;
 
-        r = rb_ary_new2(zend_hash_num_elements(ht));
-
-        zend_hash_internal_pointer_reset_ex(ht, &p);
-        while (zend_hash_get_current_data_ex(ht, (void **)&data, &p) == SUCCESS) {
-          VALUE t = zval_to_value(*data);
-          rb_ary_store(r, idx++, t);
-          zend_hash_move_forward_ex(ht, &p);
+        if (0 == zend_hash_num_elements(ht)) {
+          return rb_ary_new();
         }
-        return r; 
+
+        if (is_array_convertable(ht)) {
+          return hash_to_array(ht);
+        }
+
+        return hash_to_hash(ht);
       }
     case IS_OBJECT:
     case IS_STRING:
@@ -69,71 +138,29 @@ VALUE zval_to_value(zval* val) {
   }
 }
 
-void value2php_arg(VALUE v, char* out_arg) {
-  switch (TYPE(v)) {
-    case T_FALSE:
-    	strcat(out_arg, "false");
-      return;
-    case T_TRUE:
-    	strcat(out_arg, "true");
-      return;
-    case T_UNDEF:
-    case T_NIL:
-    	strcat(out_arg, "null");
-      return;
-    case T_FIXNUM:
-      {
-        VALUE t = rb_fix2str(v, 10);
-        strcat(out_arg, StringValuePtr(t));
-      }
-      return;
-    case T_BIGNUM:
-      {
-        VALUE t = rb_big2str(v, 10);
-        strcat(out_arg, StringValuePtr(t));
-      }
-      return;
-    case T_FLOAT:
-      {
-        VALUE t = rb_funcall(v, rb_intern("to_s"), 0);
-        strcat(out_arg, StringValuePtr(t));
-      }
-      return;
-    case T_ARRAY:
-      {
-        int i;
-        strcat(out_arg, "array(");
-        for(i=0;i<RARRAY_LEN(v);++i) {
-          value2php_arg(RARRAY_PTR(v)[i], out_arg);
-          if (i != RARRAY_LEN(v)-1) {
-            strcat(out_arg, ",");
-          }
-        }
-        strcat(out_arg, ")");
-      }
-    case T_HASH:
-      /* no implement */
-      return;
-    case T_STRING:
-    default:
-      strcat(out_arg, "'");
-      strcat(out_arg, StringValuePtr(v));
-      strcat(out_arg, "'");
-  }
+int eval_php_code(char* code) {
+  int ret = 0;
+
+  zend_try {
+    ret = zend_eval_string(code, NULL, (char*)"" TSRMLS_CC);
+  } zend_catch {
+
+  } zend_end_try();
+
+  return FAILURE == ret;
 }
 
-int eval_php_code(char* code, VALUE* return_value) {
+int eval_and_return_php_code(char* code, VALUE* return_value) {
   int err = 0;
-  zval **data;
   zval retval;
 
   zend_try {
     if (zend_eval_string(code, &retval, (char*)"" TSRMLS_CC) == FAILURE) {
       err = 1;
+    } else {
+      *return_value = zval_to_value(&retval);
+      zval_dtor(&retval);
     }
-
-    *return_value = zval_to_value(&retval);
-    zval_dtor(&retval);
 
   } zend_catch {
 
@@ -143,41 +170,57 @@ int eval_php_code(char* code, VALUE* return_value) {
 }
 
 VALUE php_eval(VALUE self, VALUE code) {
-  VALUE retval;
-  if (eval_php_code(StringValuePtr(code), &retval)) {
+  if (eval_php_code(StringValuePtr(code))) {
     rb_raise(rb_eRuntimeError, "invalid code");
+  }
+
+  return Qnil;
+}
+
+VALUE php_call(int argc, VALUE *argv, VALUE self) {
+  VALUE func, args, arg_str, retval;
+  int i;
+  char* call_str;
+
+  rb_scan_args(argc, argv, "1*", &func, &args);
+
+  if (T_SYMBOL == TYPE(func)) {
+    func = rb_sym_to_s(func); 
+  }
+
+  if (T_STRING != TYPE(func)) {
+    rb_raise(rb_eRuntimeError, "invalid function name");
+  }
+
+  arg_str = rb_str_new_cstr("");
+  for(i=0; i<argc-1; ++i) {
+    VALUE r = convert_value_into_php_string(RARRAY_PTR(args)[i]);
+    rb_str_cat(arg_str, RSTRING_PTR(r), RSTRING_LEN(r));
+    
+    if (i != argc-2) {
+      rb_str_cat2(arg_str, ",");
+    }
+  }
+
+  call_str = malloc(RSTRING_LEN(func) + RSTRING_LEN(arg_str) + sizeof("()") + 1);
+  sprintf(call_str, "%s(%s)", RSTRING_PTR(func), RSTRING_PTR(arg_str));
+  if (eval_and_return_php_code(call_str, &retval)) {
+    rb_raise(rb_eRuntimeError, "eval error");
   }
 
   return retval;
 }
 
-VALUE php_call(int argc, VALUE *argv, VALUE self) {
-  VALUE func, args, retval;
-  int i;
-  char arg_str[1024], call_str[2048];
-  zval* t = NULL;
-
-  rb_scan_args(argc, argv, "1*", &func, &args);
-
-  
-  arg_str[0] = '\0';
-  for(i=0; i<argc-1; ++i) {
-    char arg[255] = "";
-    value2php_arg(RARRAY_PTR(args)[i], arg);
-    strcat(arg_str, arg);
-    
-    if (i != argc-2) {
-      strcat(arg_str, ",");
-    }
+VALUE php_fetch_variable(VALUE self, VALUE name) {
+  zval *data = NULL;
+  if (FAILURE == zend_hash_find(&EG(symbol_table), StringValuePtr(name), RSTRING_LEN(name), (void **)&data)) {
+    /* Name not found in $GLOBALS */
   }
-
-  sprintf(call_str, "%s(%s)", StringValuePtr(func), arg_str);
-  //printf("\n***%s***\n", call_str);
-  if (eval_php_code(call_str, &retval)) {
-    rb_raise(rb_eRuntimeError, "eval error");
-  }	
-
-  return retval;
+  if (data == NULL) {
+    /* Value is NULL (not possible for symbol_table?) */
+  }
+ 
+  return Qnil;
 }
 
 VALUE php_set_output_handler(VALUE self, VALUE callback) {
@@ -210,16 +253,21 @@ void shutdown_php_embed() {
   php_embed_shutdown(TSRMLS_C);
 }
 
+VALUE mPhpEmbed;
+
 Init_php() {
 
-  VALUE cPhp;
-  cPhp = rb_define_module("PhpEmbed");
-  //rb_define_const(cPhp, "VERSION", rb_ary_new3(3, INT2FIX(0), INT2FIX(0), INT2FIX(1)));
+  mPhpEmbed = rb_define_module("PhpEmbed");
 
-  rb_define_singleton_method(cPhp, "eval", php_eval, 1);
-  rb_define_singleton_method(cPhp, "call", php_call, -1);
-  rb_define_singleton_method(cPhp, "setOutputHandler", php_set_output_handler, 1);
-  rb_define_singleton_method(cPhp, "setErrorHandler", php_set_error_handler, 1);
+  init_php_value();
+
+  //rb_define_const(mPhpEmbed, "VERSION", rb_ary_new3(3, INT2FIX(0), INT2FIX(0), INT2FIX(1)));
+
+  rb_define_singleton_method(mPhpEmbed, "eval", php_eval, 1);
+  rb_define_singleton_method(mPhpEmbed, "call", php_call, -1);
+  rb_define_singleton_method(mPhpEmbed, "fetchVariable", php_fetch_variable, 1);
+  rb_define_singleton_method(mPhpEmbed, "setOutputHandler", php_set_output_handler, 1);
+  rb_define_singleton_method(mPhpEmbed, "setErrorHandler", php_set_error_handler, 1);
    
   php_embed_module.ub_write = php_ub_write;
   php_embed_module.log_message = php_log_message;
@@ -227,6 +275,16 @@ Init_php() {
 
   initialize_php_embed();
   atexit(shutdown_php_embed);
+
+/*
+  zend_try {
+    zend_alter_ini_entry((char*)"display_errors", sizeof("display_errors")
+      , (char*)"0", sizeof("0")-1, PHP_INI_SYSTEM, PHP_INI_STAGE_RUNTIME);
+    zend_alter_ini_entry((char*)"log_errors", sizeof("log_errors")
+      , (char*)"1", sizeof("1")-1, PHP_INI_SYSTEM, PHP_INI_STAGE_RUNTIME);
+  } zend_catch {
+  } zend_end_try();
+*/
 }
 
 

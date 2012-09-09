@@ -4,21 +4,30 @@ require 'php_embed'
 describe 'PhpEmbed' do
 
   describe 'eval' do 
-      it 'return any types' do
-          PhpEmbed.eval('true').should be_true 
-          PhpEmbed.eval('false').should be_false;
-          PhpEmbed.eval('null').should be_nil
-          PhpEmbed.eval('1').should == 1
-          PhpEmbed.eval('array()').should == []
-          PhpEmbed.eval('array(1)').should == [1]
-      end
-     
       it 'raise error with invalid PhpEmbed code' do
           proc {
               PhpEmbed.eval("i n v a l i d")
           }.should raise_error
       end 
   end 
+
+  describe 'eval and call' do
+      it '1' do 
+          PhpEmbed.eval('function hoge(){ return 1; }');
+          PhpEmbed.call('hoge').should == 1;
+      end
+      it 'any value' do 
+          PhpEmbed.eval('function hoge2($arg){ return $arg; }');
+          PhpEmbed.call('hoge2', 1).should == 1;
+          PhpEmbed.call('hoge2', 'a').should == 'a';
+          PhpEmbed.call('hoge2', []).should == [];
+          PhpEmbed.call('hoge2', [1]).should == [1];
+          PhpEmbed.call('hoge2', {0=>1,1=>2}).should == [1,2];
+          PhpEmbed.call('hoge2', {10=>2}).should == {10=>2};
+          PhpEmbed.call('hoge2', {'a'=>1}).should == {'a'=>1};
+      end
+  end
+
 
   describe 'call' do
       it 'bin2hex return hex string' do
@@ -40,14 +49,14 @@ describe 'PhpEmbed' do
       end 
     
       it 'call with array' do
-          PhpEmbed.call("array_diff", [1,2,3,4,5], [3,4]).should == [1,2,5]
+          PhpEmbed.call("array_diff", [1,2,3,4,5], [3,4]).should == {0=>1,1=>2,4=>5}
       end 
 
-#      it 'raise error with invalid PhpEmbed code' do
-#          proc {
-#              PhpEmbed.call("i n v a l i d")
-#          }.should raise_error
-#      end 
+      it 'raise error with invalid PhpEmbed code' do
+          proc {
+              PhpEmbed.call("i n v a l i d")
+          }.should raise_error
+      end 
   end
 
   describe 'output' do
@@ -57,7 +66,7 @@ describe 'PhpEmbed' do
           capture = output
         })
         
-        PhpEmbed.eval('print("hoge")')
+        PhpEmbed.eval('print("hoge");')
         capture.should == 'hoge'
     end 
   end
@@ -69,7 +78,7 @@ describe 'PhpEmbed' do
           capture << error
         })
         
-        PhpEmbed.eval('trigger_error("hoge")')
+        PhpEmbed.eval('trigger_error("hoge");')
         capture.join('').should match('PHP Notice:')
     end 
   end
@@ -77,4 +86,33 @@ describe 'PhpEmbed' do
 end 
 
 
+
+describe PhpEmbed::Value do
+  it 'convert nil' do
+    PhpEmbed::Value.new(nil).to_s.should == 'null';
+  end
+  it 'convert boolean' do
+    PhpEmbed::Value.new(false).to_s.should == 'false';
+    PhpEmbed::Value.new(true).to_s.should == 'true';
+  end
+
+  it 'convert scalar' do
+    PhpEmbed::Value.new(1).to_s.should == '1';
+    PhpEmbed::Value.new("a").to_s.should == "'a'";
+    PhpEmbed::Value.new(:a).to_s.should == "'a'";
+  end
+
+  it 'convert array' do
+    PhpEmbed::Value.new([]).to_s.should == 'array()';
+    PhpEmbed::Value.new([1,2,3]).to_s.should == 'array(1,2,3)';
+    PhpEmbed::Value.new(['a', 'b']).to_s.should == "array('a','b')";
+  end
+
+  it 'convert hash' do
+    PhpEmbed::Value.new({}).to_s.should == 'array()';
+    PhpEmbed::Value.new({1=>'a'}).to_s.should == "array(1=>'a')";
+    PhpEmbed::Value.new({'a'=>1}).to_s.should == "array('a'=>1)";
+    PhpEmbed::Value.new({:a=>1}).to_s.should == "array('a'=>1)";
+  end
+end
 
