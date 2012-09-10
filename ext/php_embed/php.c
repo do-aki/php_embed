@@ -3,6 +3,7 @@
 #include <sapi/embed/php_embed.h>
 
 #include <php_embed_value.h>
+VALUE zval_to_value(zval* val);
 
 static VALUE callback_output = Qnil;
 static VALUE callback_error = Qnil;
@@ -54,8 +55,7 @@ static int is_array_convertable(HashTable* ht) {
   return 1;
 }
 
-VALUE zval_to_value(zval* val);
-VALUE hash_to_array(HashTable* ht) {
+static VALUE hash_to_array(HashTable* ht) {
   HashPosition pos;
   zval** data;
   VALUE ret;
@@ -71,7 +71,7 @@ VALUE hash_to_array(HashTable* ht) {
   return ret;
 }
 
-VALUE hash_to_hash(HashTable* ht) {
+static VALUE hash_to_hash(HashTable* ht) {
   HashPosition pos;
   zval** data;
   VALUE ret;
@@ -114,6 +114,7 @@ VALUE zval_to_value(zval* val) {
     case IS_DOUBLE:
       return DBL2NUM(Z_DVAL_P(val));
     case IS_ARRAY:
+    case IS_CONSTANT_ARRAY:
       {
         HashTable* ht = Z_ARRVAL_P(val);
 
@@ -128,13 +129,13 @@ VALUE zval_to_value(zval* val) {
         return hash_to_hash(ht);
       }
     case IS_OBJECT:
-    case IS_STRING:
     case IS_RESOURCE:
     case IS_CONSTANT:
-    case IS_CONSTANT_ARRAY:
-    default:
       convert_to_string(val);
+    case IS_STRING:
       return rb_str_new(Z_STRVAL_P(val), Z_STRLEN_P(val));
+    default:
+      return Qnil;
   }
 }
 
