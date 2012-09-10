@@ -1,7 +1,7 @@
 # encoding: UTF-8
 require 'php_embed'
 
-describe 'PhpEmbed' do
+describe PhpEmbed do
 
   describe 'eval' do 
       it 'raise error with invalid PhpEmbed code' do
