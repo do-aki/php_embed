@@ -212,6 +212,29 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
   return retval;
 }
 
+VALUE php_run(VALUE self, VALUE file) {
+  VALUE retval = Qtrue;
+  zend_file_handle handle;
+
+  if (T_STRING != TYPE(file)) {
+    rb_raise(rb_eRuntimeError, "file must be string");
+  }
+
+  handle.type = ZEND_HANDLE_FILENAME;
+  handle.filename = RSTRING_PTR(file);
+  handle.opened_path = NULL;
+  handle.free_filename = 0;
+  
+  zend_try {
+    zend_execute_scripts(ZEND_REQUIRE TSRMLS_CC, NULL, 1, &handle);
+  } zend_catch {
+    retval = Qfalse;
+  } zend_end_try();
+
+  return retval;
+
+}
+
 VALUE php_fetch_variable(VALUE self, VALUE name) {
   zval *data = NULL;
   if (FAILURE == zend_hash_find(&EG(symbol_table), StringValuePtr(name), RSTRING_LEN(name), (void **)&data)) {
@@ -266,6 +289,7 @@ Init_php() {
 
   rb_define_singleton_method(mPhpEmbed, "eval", php_eval, 1);
   rb_define_singleton_method(mPhpEmbed, "call", php_call, -1);
+  rb_define_singleton_method(mPhpEmbed, "run", php_run, 1);
   rb_define_singleton_method(mPhpEmbed, "fetchVariable", php_fetch_variable, 1);
   rb_define_singleton_method(mPhpEmbed, "setOutputHandler", php_set_output_handler, 1);
   rb_define_singleton_method(mPhpEmbed, "setErrorHandler", php_set_error_handler, 1);
