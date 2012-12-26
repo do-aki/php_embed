@@ -3,5 +3,7 @@ require 'php_embed/version'
 
 
 module PhpEmbed
-  # Your code goes here...
+  def self.Value(value)
+    self::Value.new(value)
+  end
 end

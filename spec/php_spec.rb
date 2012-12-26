@@ -20,11 +20,11 @@ describe PhpEmbed do
           PhpEmbed.eval('function hoge2($arg){ return $arg; }');
           PhpEmbed.call('hoge2', 1).should == 1;
           PhpEmbed.call('hoge2', 'a').should == 'a';
-          PhpEmbed.call('hoge2', []).should == [];
-          PhpEmbed.call('hoge2', [1]).should == [1];
-          PhpEmbed.call('hoge2', {0=>1,1=>2}).should == [1,2];
-          PhpEmbed.call('hoge2', {10=>2}).should == {10=>2};
-          PhpEmbed.call('hoge2', {'a'=>1}).should == {'a'=>1};
+          PhpEmbed.call('hoge2', []).to_a.should == [];
+          PhpEmbed.call('hoge2', [1]).to_a.should == [1];
+          PhpEmbed.call('hoge2', {0=>1,1=>2}).to_a.should == [1,2];
+          PhpEmbed.call('hoge2', {10=>2}).to_h.should == {10=>2};
+          PhpEmbed.call('hoge2', {'a'=>1}).to_h.should == {'a'=>1};
       end
   end
 
@@ -49,8 +49,12 @@ describe PhpEmbed do
       end 
     
       it 'call with array' do
-          PhpEmbed.call("array_diff", [1,2,3,4,5], [3,4]).should == {0=>1,1=>2,4=>5}
+          PhpEmbed.call("array_diff", [1,2,3,4,5], [3,4]).to_h.should == {0=>1,1=>2,4=>5}
       end 
+
+      it 'call by symbol' do
+          PhpEmbed.call(:intval, 123).should == 123
+      end
 
       it 'raise error with invalid PhpEmbed code' do
           proc {
@@ -82,6 +86,9 @@ describe PhpEmbed do
         capture.join('').should match('PHP Notice:')
     end 
   end
+
+  
+
 
 end 
 
