@@ -15,3 +15,9 @@ spec/reports
 test/tmp
 test/version_tmp
 tmp
+
+ext/php_embed/*.so
+ext/php_embed/*.o
+ext/php_embed/mkmf.log
+ext/php_embed/Makefile
+
