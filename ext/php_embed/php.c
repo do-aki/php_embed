@@ -178,7 +178,8 @@ VALUE php_require(VALUE self, VALUE file) {
   zend_file_handle handle;
 
   if (T_STRING != TYPE(file)) {
-    rb_raise(rb_eRuntimeError, "file must be string");
+    rb_raise(rb_eArgError, "file must be string");
+    return Qnil;
   }
 
   handle.type = ZEND_HANDLE_FILENAME;
@@ -193,7 +194,6 @@ VALUE php_require(VALUE self, VALUE file) {
   } zend_end_try();
 
   return retval;
-
 }
 
 VALUE php_fetch_variable(VALUE self, VALUE name) {

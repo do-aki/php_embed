@@ -101,10 +101,17 @@ describe PhpEmbed do
     end 
   end
 
-  
-
+  describe 'require' do
+    it 'require' do
+      PhpEmbed.require(File.dirname(File.expand_path(__FILE__)) + '/require.php')
+      PhpEmbed.call(:required_function).should == 'ok'
+    end
+    it 'invalid argument' do
+      proc {
+        PhpEmbed.require(nil)
+      }.should raise_error(ArgumentError)
+    end
+  end
 
 end 
-
-
 
