@@ -35,14 +35,13 @@ describe PhpEmbed do
           PhpEmbed.call('ret_arg', 'a').should == 'a';
           PhpEmbed.call('ret_arg', []).to_a.should == [];
           PhpEmbed.call('ret_arg', [1]).to_a.should == [1];
-          PhpEmbed.call('ret_arg', {0=>1,1=>2}).to_a.should == [PhpEmbed::Value(1), PhpEmbed::Value(2)];
-          PhpEmbed.call('ret_arg', {10=>2}).to_h.should == {10=>PhpEmbed::Value(2)};
-          PhpEmbed.call('ret_arg', {'a'=>1}).to_h.should == {'a'=>PhpEmbed::Value(1)};
+          PhpEmbed.call('ret_arg', {0=>1,1=>2}).to_a.should == [1,2];
+          PhpEmbed.call('ret_arg', {10=>2}).to_h.should == {10=>2};
+          PhpEmbed.call('ret_arg', {'a'=>1}).to_h.should == {'a'=>1};
 
           PhpEmbed.call('ret_arg', PhpEmbed::Value('a')).should == 'a';
       end
   end
-
 
   describe 'call' do
       it 'bin2hex return hex string' do
