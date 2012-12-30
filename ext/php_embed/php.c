@@ -7,6 +7,13 @@
 static VALUE callback_output = Qnil;
 static VALUE callback_error = Qnil;
 
+
+VALUE mPhpEmbed;
+
+VALUE rb_ePhpEmbedStanderdError;
+VALUE rb_ePhpEmbedSyntaxError;
+VALUE rb_ePhpEmbedMissingError;
+
 static int php_ub_write(const char *str, unsigned int str_length TSRMLS_DC)
 {
   if (!NIL_P(callback_output)) {
@@ -65,7 +72,7 @@ int eval_and_return_php_code(char* code, VALUE* return_value) {
 
 VALUE php_eval(VALUE self, VALUE code) {
   if (eval_php_code(StringValuePtr(code))) {
-    rb_raise(rb_eRuntimeError, "invalid code");
+    rb_raise(rb_ePhpEmbedSyntaxError, "invalid code");
   }
 
   return Qnil;
@@ -122,7 +129,7 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
 
   func = php_find_function(StringValueCStr(name));
   if (!func) {
-    rb_raise(rb_eRuntimeError, "function not found");
+    rb_raise(rb_ePhpEmbedMissingError, "function not found");
   }
 
   zval_array = (zval**)malloc(sizeof(zval*) * argc-1); 
@@ -160,7 +167,7 @@ VALUE php_call(int argc, VALUE *argv, VALUE self) {
   free(zval_array);
 
   if (FAILURE == call_result) {
-    rb_raise(rb_eRuntimeError, "function call fairure");
+    rb_raise(rb_ePhpEmbedStanderdError, "function call fairure");
   }
 
   return retval;
@@ -231,7 +238,6 @@ void shutdown_php_embed() {
   php_embed_shutdown(TSRMLS_C);
 }
 
-VALUE mPhpEmbed;
 
 Init_php() {
 
@@ -255,6 +261,10 @@ Init_php() {
   initialize_php_embed();
   atexit(shutdown_php_embed);
 
+
+  rb_ePhpEmbedStanderdError = rb_define_class_under(mPhpEmbed, "StanderdError", rb_eException);
+  rb_ePhpEmbedSyntaxError = rb_define_class_under(mPhpEmbed, "SyntaxError", rb_ePhpEmbedStanderdError);
+  rb_ePhpEmbedMissingError = rb_define_class_under(mPhpEmbed, "MissingError", rb_ePhpEmbedStanderdError);
 /*
   zend_try {
     zend_alter_ini_entry((char*)"display_errors", sizeof("display_errors")

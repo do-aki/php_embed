@@ -7,7 +7,7 @@ describe PhpEmbed do
       it 'raise error with invalid PhpEmbed code' do
           proc {
               PhpEmbed.eval("i n v a l i d")
-          }.should raise_error
+          }.should raise_error(PhpEmbed::SyntaxError)
       end 
   end 
 
@@ -73,7 +73,7 @@ describe PhpEmbed do
       it 'raise error with invalid PhpEmbed code' do
           proc {
               PhpEmbed.call("i n v a l i d")
-          }.should raise_error
+          }.should raise_error(PhpEmbed::MissingError)
       end 
   end
 
