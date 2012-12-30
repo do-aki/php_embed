@@ -67,6 +67,7 @@ describe PhpEmbed::Value do
     PhpEmbed::Value.new([1]).to_a.should == [PhpEmbed::Value.new(1)]
     PhpEmbed::Value.new([1,"2",nil]).to_a
       .should == [PhpEmbed::Value.new(1), PhpEmbed::Value.new("2"), PhpEmbed::Value(nil)]
+    PhpEmbed::Value.new({1=>1, 2=>2}).to_a.should == [1,2]
   end
 
   it 'to_h' do
@@ -75,6 +76,7 @@ describe PhpEmbed::Value do
       .should == {0=>PhpEmbed::Value.new(1), 1=>PhpEmbed::Value.new("2"), 2=>PhpEmbed::Value(nil)}
     PhpEmbed::Value.new({a:1}).to_h
       .should == {'a'=>PhpEmbed::Value.new(1)}
+    PhpEmbed::Value.new({1=>1, 2=>2}).to_h.should == {1=>1,2=>2}
   end
 
   it 'to_f' do

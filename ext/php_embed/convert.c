@@ -91,12 +91,32 @@ static int hash_to_zval(VALUE key, VALUE value, VALUE zval_array) {
     return ST_CONTINUE;
   }
 
+  ary = (zval*)zval_array;
+  v = value_to_zval(value);
+
+  if (Qtrue == key) {
+    zend_hash_index_update(Z_ARRVAL_P(ary), 1, &v, sizeof(zval *), NULL);
+    return ST_CONTINUE;
+  }
+
+  if (Qfalse == key || Qnil == key) {
+    zend_hash_index_update(Z_ARRVAL_P(ary), 0, &v, sizeof(zval *), NULL);
+    return ST_CONTINUE;
+  }
+
+  if (T_FIXNUM == TYPE(key)) {
+    int idx = FIX2INT(key);
+    zend_hash_index_update(Z_ARRVAL_P(ary), idx, &v, sizeof(zval *), NULL);
+    return ST_CONTINUE;
+  }
+
   switch (TYPE(key)) {
+    case T_BIGNUM:
+      key = rb_big2str(key, 10);
+      break;
     case T_SYMBOL:
       key = rb_sym_to_s(key);
       break;
-    case T_FIXNUM:
-    case T_BIGNUM:
     case T_STRING:
       key = rb_string_value(&key);
       break;
@@ -104,9 +124,7 @@ static int hash_to_zval(VALUE key, VALUE value, VALUE zval_array) {
       rb_raise(rb_eRuntimeError, "invalid key (%d)", TYPE(key));
   }
 
-  ary = (zval*)zval_array;
-  v = value_to_zval(value);
-  
+  //ZEND_HANDLE_NUMERIC(RSTRING_PTR(key), RSTRING_LEN(key), zend_hash_index_update(Z_ARRVAL_P(ary), idx, &v, sizeof(zval *), NULL));
   zend_symtable_update(Z_ARRVAL_P(ary), RSTRING_PTR(key), RSTRING_LEN(key), &v, sizeof(zval *), NULL);
 
   return ST_CONTINUE;
