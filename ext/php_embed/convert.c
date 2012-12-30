@@ -198,7 +198,7 @@ VALUE convert_value_to_php_string(VALUE v) {
         rb_str_cat2(ret, StringValuePtr(v));
         rb_str_cat2(ret, "'");
         return ret;
-      } 
+      }
     default:
       rb_raise(rb_eRuntimeError, "no implemented");
   }
@@ -256,6 +256,15 @@ zval* value_to_zval(VALUE v) {
         return zv;
       } 
     default:
+      {
+        if (CLASS_OF(v) == cPhpEmbedValue) {
+          php_value* pv;
+          Data_Get_Struct(v, php_value, pv);
+          MAKE_COPY_ZVAL(&pv->value, zv);
+          return zv;
+        }
+      }
+      FREE_ZVAL(zv);
       rb_raise(rb_eRuntimeError, "no implemented");
   }
 }

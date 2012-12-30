@@ -4,6 +4,8 @@
 #include <ruby.h>
 #include <php.h>
 
+extern VALUE cPhpEmbedValue;
+
 void init_php_value();
 VALUE new_php_embed_value(zval* value);
 

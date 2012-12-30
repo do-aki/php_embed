@@ -12,19 +12,34 @@ describe PhpEmbed do
   end 
 
   describe 'eval and call' do
-      it '1' do 
-          PhpEmbed.eval('function hoge(){ return 1; }');
-          PhpEmbed.call('hoge').should == 1;
+      it 'return fixnum' do 
+          PhpEmbed.eval('function ret_1(){ return 1; }');
+          PhpEmbed.call('ret_1').should == 1;
       end
-      it 'any value' do 
-          PhpEmbed.eval('function hoge2($arg){ return $arg; }');
-          PhpEmbed.call('hoge2', 1).should == 1;
-          PhpEmbed.call('hoge2', 'a').should == 'a';
-          PhpEmbed.call('hoge2', []).to_a.should == [];
-          PhpEmbed.call('hoge2', [1]).to_a.should == [1];
-          PhpEmbed.call('hoge2', {0=>1,1=>2}).to_a.should == [1,2];
-          PhpEmbed.call('hoge2', {10=>2}).to_h.should == {10=>2};
-          PhpEmbed.call('hoge2', {'a'=>1}).to_h.should == {'a'=>1};
+      it 'return string' do 
+          PhpEmbed.eval('function ret_string(){ return "string"; }');
+          PhpEmbed.call('ret_string').should == 'string';
+      end
+      it 'return array' do 
+          PhpEmbed.eval('function ret_array(){ return array(1,2); }');
+          PhpEmbed.call('ret_array').to_a.should == [1,2];
+      end
+      it 'return hash' do 
+          PhpEmbed.eval('function ret_hash(){ return array("a"=>1,"b"=>2); }');
+          PhpEmbed.call('ret_hash').to_a.should == [1, 2];
+          PhpEmbed.call('ret_hash').to_h.should == {'a'=>1,'b'=>2};
+      end
+      it 'return arg' do 
+          PhpEmbed.eval('function ret_arg($arg){ return $arg; }');
+          PhpEmbed.call('ret_arg', 1).should == 1;
+          PhpEmbed.call('ret_arg', 'a').should == 'a';
+          PhpEmbed.call('ret_arg', []).to_a.should == [];
+          PhpEmbed.call('ret_arg', [1]).to_a.should == [1];
+          PhpEmbed.call('ret_arg', {0=>1,1=>2}).to_a.should == [PhpEmbed::Value(1), PhpEmbed::Value(2)];
+          PhpEmbed.call('ret_arg', {10=>2}).to_h.should == {10=>PhpEmbed::Value(2)};
+          PhpEmbed.call('ret_arg', {'a'=>1}).to_h.should == {'a'=>PhpEmbed::Value(1)};
+
+          PhpEmbed.call('ret_arg', PhpEmbed::Value('a')).should == 'a';
       end
   end
 

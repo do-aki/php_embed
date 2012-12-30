@@ -71,35 +71,96 @@ VALUE php_eval(VALUE self, VALUE code) {
   return Qnil;
 }
 
+
+zend_function* php_find_function(char* name) {
+  char* lcname;
+  int name_len;
+  int found;
+  zend_function *func;
+
+  name_len = strlen(name);
+  lcname = zend_str_tolower_dup(name, name_len);
+
+  name = lcname;
+  if ('\\' == lcname[0]) {
+    name = &lcname[1];
+    name_len--;
+  }
+
+  found = (SUCCESS == zend_hash_find(EG(function_table), name, name_len+1, (void**)&func));
+  efree(lcname);
+
+  if (found) {
+    return func;
+  }
+
+  return NULL;
+}
+
+
+
 VALUE php_call(int argc, VALUE *argv, VALUE self) {
-  VALUE func, args, arg_str, retval;
-  int i;
-  char* call_str;
+  VALUE name, args, retval;
+  zend_function* func;
+  int call_result, i;
+  zval *retval_ptr;
+  zend_fcall_info fci;
+  zend_fcall_info_cache fcc;
+  zval ***call_args;
+  zval **zval_array;
 
-  rb_scan_args(argc, argv, "1*", &func, &args);
+  rb_scan_args(argc, argv, "1*", &name, &args);
 
-  if (T_SYMBOL == TYPE(func)) {
-    func = rb_sym_to_s(func); 
+  if (T_SYMBOL == TYPE(name)) {
+    name = rb_sym_to_s(name); 
   }
 
-  if (T_STRING != TYPE(func)) {
-    rb_raise(rb_eRuntimeError, "invalid function name");
+  if (T_STRING != TYPE(name)) {
+    rb_raise(rb_eArgError, "invalid function name");
   }
 
-  arg_str = rb_str_new_cstr("");
+
+  func = php_find_function(StringValueCStr(name));
+  if (!func) {
+    rb_raise(rb_eRuntimeError, "function not found");
+  }
+
+  zval_array = (zval**)malloc(sizeof(zval*) * argc-1); 
+  call_args = (zval***)malloc(sizeof(zval**) * argc-1); 
   for(i=0; i<argc-1; ++i) {
-    VALUE r = convert_value_to_php_string(RARRAY_PTR(args)[i]);
-    rb_str_cat(arg_str, RSTRING_PTR(r), RSTRING_LEN(r));
-    
-    if (i != argc-2) {
-      rb_str_cat2(arg_str, ",");
-    }
+    zval_array[i] = value_to_zval(RARRAY_PTR(args)[i]);
+    call_args[i] = &zval_array[i];
   }
+  
+  fci.size = sizeof(fci);
+  fci.function_table = NULL;
+  fci.function_name = NULL;
+  fci.symbol_table = NULL;
+  fci.object_ptr = NULL;
+  fci.retval_ptr_ptr = &retval_ptr;
+  fci.param_count = argc-1;
+  fci.params = call_args;
+  fci.no_separation = 1;
 
-  call_str = malloc(RSTRING_LEN(func) + RSTRING_LEN(arg_str) + sizeof("()") + 1);
-  sprintf(call_str, "%s(%s)", RSTRING_PTR(func), RSTRING_PTR(arg_str));
-  if (eval_and_return_php_code(call_str, &retval)) {
-    rb_raise(rb_eRuntimeError, "eval error");
+  fcc.initialized = 1;
+  fcc.function_handler = func;
+  fcc.calling_scope = EG(scope);
+  fcc.called_scope = NULL;
+  fcc.object_ptr = NULL;
+
+  call_result = zend_call_function(&fci, &fcc TSRMLS_CC);
+  retval = new_php_embed_value(retval_ptr);
+
+  free(call_args);
+
+  for(i=0; i<argc-1; ++i) {
+    zval_dtor(zval_array[i]);
+    FREE_ZVAL(zval_array[i]);
+  }
+  free(zval_array);
+
+  if (FAILURE == call_result) {
+    rb_raise(rb_eRuntimeError, "function call fairure");
   }
 
   return retval;
