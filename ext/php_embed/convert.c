@@ -125,7 +125,7 @@ static int hash_to_zval(VALUE key, VALUE value, VALUE zval_array) {
   }
 
   //ZEND_HANDLE_NUMERIC(RSTRING_PTR(key), RSTRING_LEN(key), zend_hash_index_update(Z_ARRVAL_P(ary), idx, &v, sizeof(zval *), NULL));
-  zend_symtable_update(Z_ARRVAL_P(ary), RSTRING_PTR(key), RSTRING_LEN(key), &v, sizeof(zval *), NULL);
+  zend_symtable_update(Z_ARRVAL_P(ary), RSTRING_PTR(key), RSTRING_LEN(key) + 1, &v, sizeof(zval *), NULL);
 
   return ST_CONTINUE;
 }
