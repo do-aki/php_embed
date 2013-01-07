@@ -29,11 +29,22 @@ static VALUE php_value_alloc(VALUE klass) {
   return Data_Make_Struct(klass, php_value, php_value_mark, php_value_free, pv);
 }
 
+static zval* get_zval(VALUE value) {
+  php_value* pv;
+  Data_Get_Struct(value, php_value, pv);
+  return pv->value;
+}
+
+static void set_zval(VALUE value, zval* zv) {
+  php_value* pv;
+  Data_Get_Struct(value, php_value, pv);
+  pv->value = zv;
+}
+
 
 VALUE new_php_embed_value(zval* value) {
 
   VALUE new_value;
-  php_value* pv;
   zval* new_zval;
   VALUE arg = INT2FIX(0);
 
@@ -43,74 +54,68 @@ VALUE new_php_embed_value(zval* value) {
   INIT_PZVAL(new_zval);
   
   new_value = php_value_alloc(cPhpEmbedValue);
-  Data_Get_Struct(new_value, php_value, pv);
-  pv->value = new_zval;
+  set_zval(new_value, new_zval);
 
   return new_value;
 }
 
-
 VALUE php_value_initialize(VALUE self, VALUE value) {
-  php_value* pv;
   zval* retval;
   VALUE code;
 
-  Data_Get_Struct(self, php_value, pv);
-  pv->value = value_to_zval(value);
+  set_zval(self, value_to_zval(value));
 
   return Qnil;
 }
+
+VALUE php_value_call(int argc, VALUE* argv, VALUE self) {
+  return Qnil;
+}
+
 
 VALUE php_value_to_php(VALUE self, VALUE value) {
   return convert_value_to_php_string(value);
 }
 
 VALUE php_value_to_string(VALUE self) {
-  php_value* pv;
-  Data_Get_Struct(self, php_value, pv);
- 
-    
-  if (pv->value) {
-    convert_to_string(pv->value);
-    return rb_str_new(Z_STRVAL_P(pv->value), Z_STRLEN_P(pv->value)); 
+  zval* zv = get_zval(self);
+
+  if (zv) {
+    convert_to_string(zv);
+    return rb_str_new(Z_STRVAL_P(zv), Z_STRLEN_P(zv)); 
   }
 
   return Qnil;
 }
 
 VALUE php_value_to_integer(VALUE self) {
-  php_value* pv;
-  Data_Get_Struct(self, php_value, pv);
- 
+  zval* zv = get_zval(self);
     
-  if (pv->value) {
-    convert_to_long(pv->value);
-    return rb_fix_new(Z_LVAL_P(pv->value)); 
+  if (zv) {
+    convert_to_long(zv);
+    return rb_fix_new(Z_LVAL_P(zv)); 
   }
 
   return Qnil;
 }
 
 VALUE php_value_to_float(VALUE self) {
-  php_value* pv;
-  Data_Get_Struct(self, php_value, pv);
- 
+  zval* zv = get_zval(self);
     
-  if (pv->value) {
-    convert_to_double(pv->value);
-    return rb_float_new(Z_DVAL_P(pv->value)); 
+  if (zv) {
+    convert_to_double(zv);
+    return rb_float_new(Z_DVAL_P(zv)); 
   }
 
   return Qnil;
 }
 
 VALUE php_value_to_boolean(VALUE self) {
-  php_value* pv;
-  Data_Get_Struct(self, php_value, pv);
+  zval* zv = get_zval(self);
     
-  if (pv->value) {
-    convert_to_boolean(pv->value);
-    if (Z_LVAL_P(pv->value)) {
+  if (zv) {
+    convert_to_boolean(zv);
+    if (Z_LVAL_P(zv)) {
       return Qtrue;
     } else {
       return Qfalse;
@@ -121,49 +126,44 @@ VALUE php_value_to_boolean(VALUE self) {
 }
 
 VALUE php_value_to_array(VALUE self) {
-  php_value* pv;
-  Data_Get_Struct(self, php_value, pv);
+  zval* zv = get_zval(self);
  
-  if (pv->value) {
-    return zval_to_array(pv->value);
+  if (zv) {
+    return zval_to_array(zv);
   }
 
   return Qnil;
 }
 
 VALUE php_value_to_hash(VALUE self) {
-  php_value* pv;
-  Data_Get_Struct(self, php_value, pv);
+  zval* zv = get_zval(self);
  
-  if (pv->value) {
-    return zval_to_hash(pv->value);
+  if (zv) {
+    return zval_to_hash(zv);
   }
 
   return Qnil;
 }
 
 VALUE php_value_obj_equal(VALUE self, VALUE rhs) {
-  php_value* pv;
+  zval* lhs_zv;
   zval* rhs_zv;
   zval* result;    
   int cmp_ret;
 
-  Data_Get_Struct(self, php_value, pv);
-  if (pv->value == NULL) {
+  lhs_zv = get_zval(self);
+  if (lhs_zv == NULL) {
     return Qnil;
   }
 
   if (CLASS_OF(rhs) == cPhpEmbedValue) {
-    php_value* rhs_pv;
-    Data_Get_Struct(rhs, php_value, rhs_pv);
-
-    rhs_zv = rhs_pv->value;
+    rhs_zv = get_zval(rhs);
   } else {
     rhs_zv = value_to_zval(rhs);
   }
 
   MAKE_STD_ZVAL(result);
-  compare_function(result, pv->value, rhs_zv);
+  compare_function(result, lhs_zv, rhs_zv);
   cmp_ret = Z_LVAL_P(result);
   FREE_ZVAL(result); 
 
