@@ -96,5 +96,12 @@ describe PhpEmbed::Value do
     PhpEmbed::Value.new(1).should == 1
     PhpEmbed::Value.new('a').should == 'a'
   end
-end
 
+  it 'callable' do
+    f = PhpEmbed::Value.new('is_array')
+    f.callable?.should == true
+    f.call([]).should == true
+    f.call(0).should == false
+  end
+
+end
