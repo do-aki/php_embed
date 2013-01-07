@@ -104,4 +104,19 @@ describe PhpEmbed::Value do
     f.call(0).should == false
   end
 
+  it 'eval value' do
+    PhpEmbed::Value.eval('array(1)').to_a.should == [1]
+  end
+
+  it 'eval closure' do
+    f = PhpEmbed::Value.eval <<EOS
+      function($a, $b){
+         return $a * $b;
+      }
+EOS
+    f.callable?.should == true
+    f.call(2,3).should == 6
+  end
+
 end
+

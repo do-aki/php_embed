@@ -139,6 +139,17 @@ VALUE php_value_to_string(VALUE self) {
   return Qnil;
 }
 
+VALUE php_value_eval(VALUE self, VALUE src) {
+  VALUE return_value;
+  char* code = StringValueCStr(src);
+
+  if (eval_and_return_php_code(code, &return_value) == FAILURE) {
+    rb_raise(rb_ePhpEmbedStanderdError, "eval failed");
+  }
+
+  return return_value;
+}
+
 VALUE php_value_to_integer(VALUE self) {
   zval* zv = get_zval(self);
     
@@ -240,6 +251,5 @@ void init_php_value() {
   rb_define_method(cPhpEmbedValue, "==", php_value_obj_equal, 1);
 
   rb_define_singleton_method(cPhpEmbedValue, "to_php", php_value_to_php, 1);
-
-
+  rb_define_singleton_method(cPhpEmbedValue, "eval", php_value_eval, 1);
 }

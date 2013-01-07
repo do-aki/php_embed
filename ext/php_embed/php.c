@@ -48,22 +48,22 @@ int eval_php_code(char* code) {
 }
 
 int eval_and_return_php_code(char* code, VALUE* return_value) {
-  int err = 0;
-  zval retval;
+  int retval = SUCCESS;
+  zval evaluated;
 
   zend_try {
-    if (zend_eval_string(code, &retval, (char*)"" TSRMLS_CC) == FAILURE) {
-      err = 1;
+    if (zend_eval_string(code, &evaluated, (char*)"" TSRMLS_CC) == FAILURE) {
+      retval = FAILURE;
     } else {
-      *return_value = new_php_embed_value(&retval);
-      zval_dtor(&retval);
+      *return_value = new_php_embed_value(&evaluated);
+      zval_dtor(&evaluated);
     }
 
   } zend_catch {
 
   } zend_end_try();
 
-  return err;
+  return retval;
 }
 
 VALUE php_eval(VALUE self, VALUE code) {
