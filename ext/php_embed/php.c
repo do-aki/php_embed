@@ -1,12 +1,9 @@
 #include <stdio.h>
-#include <ruby.h>
 #include <sapi/embed/php_embed.h>
-#include "value.h"
-#include "convert.h"
+#include "php_embed.h"
 
 static VALUE callback_output = Qnil;
 static VALUE callback_error = Qnil;
-
 
 VALUE mPhpEmbed;
 
@@ -58,7 +55,6 @@ int eval_and_return_php_code(char* code, VALUE* return_value) {
     if (zend_eval_string(code, &retval, (char*)"" TSRMLS_CC) == FAILURE) {
       err = 1;
     } else {
-      //*return_value = zval_to_value(&retval);
       *return_value = new_php_embed_value(&retval);
       zval_dtor(&retval);
     }
@@ -103,8 +99,6 @@ zend_function* php_find_function(char* name) {
 
   return NULL;
 }
-
-
 
 VALUE php_call(int argc, VALUE *argv, VALUE self) {
   VALUE name, args, retval;

@@ -1,9 +1,5 @@
-#ifndef PHP_EMBED_CONVERT
-#define PHP_EMBED_CONVERT
-
-#include <ruby.h>
-#include <php.h>
-
+#ifndef PHP_EMBED_CONVERT_HEADER
+#define PHP_EMBED_CONVERT_HEADER
 
 VALUE zval_to_hash(zval* zv);
 VALUE zval_to_array(zval* zv);

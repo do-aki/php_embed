@@ -1,10 +1,6 @@
 #include <string.h>
-#include <ruby.h>
-#include <php.h>
-#include "value.h"
-#include "convert.h"
+#include "php_embed.h"
 
-extern mPhpEmbed;
 VALUE cPhpEmbedValue;
 
 static void php_value_mark(php_value* pv) {

@@ -1,6 +1,4 @@
-#include "value.h"
-#include "convert.h"
-
+#include "php_embed.h"
 
 VALUE zval_to_array(zval* zv) {
   HashTable* ht;
