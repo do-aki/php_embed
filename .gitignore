@@ -20,4 +20,5 @@ ext/php_embed/*.so
 ext/php_embed/*.o
 ext/php_embed/mkmf.log
 ext/php_embed/Makefile
-
+ext/php_embed/src
+ext/php_embed/php
