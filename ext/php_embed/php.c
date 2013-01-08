@@ -5,6 +5,8 @@
 static VALUE callback_output = Qnil;
 static VALUE callback_error = Qnil;
 
+void ***tsrm_ls;
+
 VALUE mPhpEmbed;
 
 VALUE rb_ePhpEmbedStanderdError;
@@ -20,7 +22,7 @@ static int php_ub_write(const char *str, unsigned int str_length TSRMLS_DC)
   }
   return str_length;
 }
-static void php_log_message(char *message)
+static void php_log_message(char *message TSRMLS_DC)
 {
   if (!NIL_P(callback_error)) {
     rb_proc_call(callback_error, rb_ary_new3(1, rb_str_new(message, strlen(message))));
@@ -224,7 +226,7 @@ VALUE php_set_error_handler(VALUE self, VALUE callback) {
 
 void initialize_php_embed() {
   const char *argv[2] = {"ruby", NULL};
-  php_embed_init(1, (char**)argv);
+  php_embed_init(1, (char**)argv PTSRMLS_CC);
   EG(bailout)=NULL;
 }
 

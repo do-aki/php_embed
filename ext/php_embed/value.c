@@ -225,7 +225,7 @@ VALUE php_value_obj_equal(VALUE self, VALUE rhs) {
   }
 
   MAKE_STD_ZVAL(result);
-  compare_function(result, lhs_zv, rhs_zv);
+  compare_function(result, lhs_zv, rhs_zv TSRMLS_CC);
   cmp_ret = Z_LVAL_P(result);
   FREE_ZVAL(result); 
 
