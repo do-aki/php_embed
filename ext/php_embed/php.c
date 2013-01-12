@@ -174,7 +174,7 @@ VALUE php_require(VALUE self, VALUE file) {
     VALUE retval = Qtrue;
     zend_file_handle handle;
 
-    if (TYPE(file) == T_STRING) {
+    if (TYPE(file) != T_STRING) {
         rb_raise(rb_eArgError, "file must be string");
         return Qnil;
     }

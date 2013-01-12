@@ -160,12 +160,13 @@ VALUE convert_value_to_php_string(VALUE v) {
             {
                 VALUE ret = rb_str_new_cstr("array(");
                 VALUE ary = rb_ary_new();
+                VALUE *p;
                 int i, len;
 
                 rb_hash_foreach(v, hash_to_php_string_array, ary);
 
                 len = RARRAY_LEN(ary);
-                VALUE* p = RARRAY_PTR(ary);
+                p = RARRAY_PTR(ary);
                 for(i=0; i<len; ++i) {
                     rb_str_cat2(ret, StringValuePtr(p[i]));
                     if (i != len-1) {
