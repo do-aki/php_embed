@@ -4,10 +4,10 @@
 extern VALUE cPhpEmbedValue;
 
 void init_php_value();
-VALUE new_php_embed_value(zval* value);
+VALUE new_php_embed_value(zval *value);
 
 typedef struct {
-  zval* value;
+    zval *value;
 } php_value;
 
 #endif

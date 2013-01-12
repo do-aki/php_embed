@@ -11,10 +11,10 @@ extern VALUE rb_ePhpEmbedStanderdError;
 extern VALUE rb_ePhpEmbedSyntaxError;
 extern VALUE rb_ePhpEmbedMissingError;
 
-extern void ***tsrm_ls; 
+extern void ***tsrm_ls;
 
-int eval_php_code(char* code);
-int eval_and_return_php_code(char* code, VALUE* return_value);
+int eval_php_code(char *code);
+int eval_and_return_php_code(char *code, VALUE *return_value);
 
 #endif
 
