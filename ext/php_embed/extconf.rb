@@ -3,14 +3,15 @@ require 'fileutils'
 require 'pathname'
 require 'open-uri'
 
+DEFAULT_PHP_VERSION = "5.6.0"
 
+def default_download_url(php_version)
+    "http://php.net/distributions/php-#{php_version}.tar.bz2"
+end
 
-PHP_VERSION = '5.4.10'
-PHP_SRC_URL = "http://php.net/distributions/php-#{PHP_VERSION}.tar.bz2"
-
-def download_src(destfile)
-  print "download php source\n"
-  FileUtils.copy_stream(open(PHP_SRC_URL), destfile)
+def download_source(url, destfile)
+  print "download php source from: #{url}\n"
+  FileUtils.copy_stream(open(url), destfile)
 end
 
 def decompression(archive)
@@ -64,15 +65,15 @@ def prepare_compile_php(prefix)
   abort 'need make' unless find_executable 'make'
 end
 
-def compile_php(prefix)
+def compile_php(version, url, prefix)
   Dir.mkdir 'src' unless Dir.exists? 'src'
   Dir.chdir('src') do
-    src_filename = "php-#{PHP_VERSION}.tar.bz2"
-    download_src(src_filename) unless File.exists? src_filename
-    decompression(src_filename)
+    filename = "php.tar.bz2"
+    download_source(url, filename) unless File.exists? filename
+    decompression(filename)
   end
 
-  src_dir = "src/php-#{PHP_VERSION}"
+  src_dir = "src/php-#{version}"
   if !Dir.exists? src_dir
     abort 'soruce directory not exists'
   end
@@ -97,11 +98,16 @@ have_libphp = have_library('php5', 'php_embed_init')
 if !php_config || !have_libphp
   php_version = arg_config('--compile-php')
   abort 'libphp5 or php-config not found: try --compile-php' unless php_version
+  if php_version == true then
+      php_version = DEFAULT_PHP_VERSION
+  end
+
+  php_download_url = arg_config('--php-source-url', default_download_url(php_version))
 
   prefix = Pathname.getwd.join('php')
 
   prepare_compile_php(prefix.to_s)
-  compile_php(prefix.to_s)
+  compile_php(php_version, php_download_url, prefix.to_s)
 
   php_config = prefix.join('bin', 'php-config').to_s
   find_library('php5', 'php_embed_init', prefix.join('lib').to_s)
