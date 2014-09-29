@@ -77,6 +77,25 @@ VALUE php_eval(VALUE self, VALUE code) {
     return Qnil;
 }
 
+VALUE php_const(VALUE self, VALUE name) {
+
+    int ret = 0, name_len;
+    char * name_c = StringValuePtr(name);
+    zval c;
+    VALUE retval = Qnil;
+
+    name_len = strlen(name_c);
+
+    zend_try {
+        if (zend_get_constant_ex(name_c, name_len, &c, NULL, ZEND_FETCH_CLASS_SILENT TSRMLS_CC)) {
+            retval = new_php_embed_value(&c);
+        }
+    } zend_catch {
+
+    } zend_end_try();
+
+    return retval;
+}
 
 zend_function *php_find_function(char *name) {
     char *lcname;
@@ -225,6 +244,8 @@ VALUE php_set_error_handler(VALUE self, VALUE callback) {
     return Qnil;
 }
 
+
+
 void initialize_php_embed() {
     const char *argv[2] = {"ruby", NULL};
     php_embed_init(1, (char **)argv PTSRMLS_CC);
@@ -242,6 +263,7 @@ Init_php() {
 
     rb_define_singleton_method(mPhpEmbed, "eval", php_eval, 1);
     rb_define_singleton_method(mPhpEmbed, "call", php_call, -1);
+    rb_define_singleton_method(mPhpEmbed, "const", php_const, 1);
     rb_define_singleton_method(mPhpEmbed, "require", php_require, 1);
     rb_define_singleton_method(mPhpEmbed, "fetchVariable", php_fetch_variable, 1);
     rb_define_singleton_method(mPhpEmbed, "setOutputHandler", php_set_output_handler, 1);

@@ -113,5 +113,11 @@ describe PhpEmbed do
     end
   end
 
+  describe 'const' do
+    it 'const' do
+      PhpEmbed.const('PHP_SAPI').should == 'embed'
+    end
+  end
+
 end 
 
