@@ -49,18 +49,18 @@ gem install php_embed
 
 ###install with php compile
 ```
-gem install -- --compile-php
+gem install php_embed -- --compile-php
 ```
 
 インストール時に、php のソースコードを取得してコンパイルします
-インストールされる php のバージョンは 5.6.0 です。
+インストールされる php のバージョンのデフォルトは 5.6.0 です。
 
 `--compile-php=5.5.17` のように、php のバージョンを指定することも可能です
 
 
 ##install with php compile (use old version)
 ```
-gem install -- --compile-php=5.3.3 --php-source-url=http://museum.php.net/php5/php-5.3.3.tar.bz2
+gem install php_embed -- --compile-php=5.3.3 --php-source-url=http://museum.php.net/php5/php-5.3.3.tar.bz2
 ```
 古いバージョンの php を使いたい場合、ソースコードがダウンロードできずにインストールに失敗する場合があります
 その時は `--php-source-url` でダウンロードURLを指定できます
